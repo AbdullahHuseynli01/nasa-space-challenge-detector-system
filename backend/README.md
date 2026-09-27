@@ -1,0 +1,83 @@
+# NASA Sea-Ice Backend
+
+FastAPI backend for the NASA sea-ice trend application.
+
+The backend loads the bundled NASA CSV exports, validates and aggregates the
+monthly observations, computes the statistical result in Python, and exposes
+that result through FastAPI. The AI endpoint only explains an already-calculated
+result; it is not part of the statistical calculation path.
+
+## Run locally
+
+From this directory, create and activate a virtual environment, install the
+dependencies, and start the development server:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+# Edit .env and set GEMINI_API_KEY to your local secret.
+python -m uvicorn app.main:app --reload
+```
+
+During development, CORS allows `http://localhost:3000` and
+`http://localhost:5173`. Override the comma-separated origins with the
+`CORS_ORIGINS` environment variable when needed. Set `APP_ENV=production` in
+deployment; production startup requires explicit `CORS_ORIGINS` values.
+
+## AI explanations
+
+`POST /api/explain` accepts a Python-calculated `region`, `variable`, `period`,
+and `trend` result. The backend sends it to Google's Gemini API with
+`gemini-2.5-flash` to write a concise explanation. The API key
+is loaded only by the backend and is never part of the frontend request or
+response. The AI layer does not calculate or modify statistical results.
+
+Example request:
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/explain `
+  -ContentType 'application/json' -Body (@{
+    region = 'arctic'
+    variable = 'sea_ice_fraction'
+    period = @{ start = 1948; end = 2025 }
+    trend = @{
+      direction = 'decreasing'
+      sen_slope = -0.0018
+      p_value = 0.002
+      significant = $true
+    }
+  } | ConvertTo-Json -Depth 4)
+```
+
+The response has the form `{ "explanation": "..." }`. The server sends the
+validated JSON to Gemini as text through the official `google-genai` SDK; it
+does not send or process an image for this endpoint.
+
+## Tests
+
+Install the development dependencies and run the integration tests from this
+directory:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+## API endpoints
+
+- `GET /` — basic service status
+- `GET /health` — health check
+- `GET /api/regions` — supported regions
+- `GET /api/variables` — supported variables
+- `GET /api/series?region=arctic` — validated monthly observations
+- `GET /api/trend?region=arctic` — Python-calculated trend result
+- `GET /api/analysis?region=arctic` — annual series plus trend result
+- `GET /api/trends` — trend-analysis implementation status
+- `POST /api/explain` — concise explanation of a supplied calculated result
+- `/docs` — FastAPI interactive documentation
+
+The API returns the period represented by complete annual observations. A
+partial year is retained in the monthly series but excluded from annual trend
+analysis.
