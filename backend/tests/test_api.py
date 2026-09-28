@@ -184,34 +184,19 @@ def _explanation_request() -> dict[str, object]:
     }
 
 
-def test_explain_uses_gemini_without_recalculating(
+def test_explain_uses_groq_without_recalculating(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: dict[str, object] = {}
 
-    class FakeModels:
-        def generate_content(self, **kwargs: object) -> SimpleNamespace:
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> list[SimpleNamespace]:
             calls.update(kwargs)
-            return SimpleNamespace(
-                candidates=[
-                    SimpleNamespace(
-                        content=SimpleNamespace(
-                            parts=[
-                                SimpleNamespace(
-                                    text=(
-                                        "The supplied result shows a decreasing sea-ice "
-                                        "fraction trend that is statistically significant."
-                                    )
-                                )
-                            ]
-                        )
-                    )
-                ]
-            )
+            return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=("The supplied result shows a decreasing sea-ice fraction trend that is statistically significant.")))])]
 
-    fake_client = SimpleNamespace(models=FakeModels(), close=lambda: None)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()), close=lambda: None)
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
     monkeypatch.setattr(
         explanation_service,
         "_build_client",
@@ -227,30 +212,22 @@ def test_explain_uses_gemini_without_recalculating(
             "that is statistically significant."
         )
     }
-    assert calls["model"] == "gemini-2.5-flash"
+    assert calls["model"] == "openai/gpt-oss-120b"
     assert "-0.0018" in calls["contents"]
     assert "0.002" in calls["contents"]
     assert "test-key" not in response.text
 
 
-def test_explain_rejects_incomplete_gemini_output(
+def test_explain_rejects_incomplete_groq_output(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class FakeModels:
-        def generate_content(self, **kwargs: object) -> SimpleNamespace:
-            return SimpleNamespace(
-                candidates=[
-                    SimpleNamespace(
-                        content=SimpleNamespace(
-                            parts=[SimpleNamespace(text="Over the period")]
-                        )
-                    )
-                ]
-            )
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> list[SimpleNamespace]:
+            return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="Over the period"))])]
 
-    fake_client = SimpleNamespace(models=FakeModels(), close=lambda: None)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()), close=lambda: None)
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
     monkeypatch.setattr(
         explanation_service,
         "_build_client",
@@ -278,20 +255,12 @@ def test_explain_rejects_new_numeric_values(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class FakeModels:
-        def generate_content(self, **kwargs: object) -> SimpleNamespace:
-            return SimpleNamespace(
-                candidates=[
-                    SimpleNamespace(
-                        content=SimpleNamespace(
-                            parts=[SimpleNamespace(text="The change spans 77 years.")]
-                        )
-                    )
-                ]
-            )
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> list[SimpleNamespace]:
+            return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="The change spans 77 years."))])]
 
-    fake_client = SimpleNamespace(models=FakeModels(), close=lambda: None)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()), close=lambda: None)
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
     monkeypatch.setattr(
         explanation_service,
         "_build_client",
@@ -303,11 +272,11 @@ def test_explain_rejects_new_numeric_values(
     assert response.status_code == 502
 
 
-def test_explain_requires_gemini_api_key(
+def test_explain_requires_groq_api_key(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
 
     response = client.post("/api/explain", json=_explanation_request())
 

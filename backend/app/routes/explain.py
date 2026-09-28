@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.schemas import ExplanationRequest, ExplanationResponse
 from app.services.explanation import (
     ExplanationGenerationError,
-    MissingGeminiApiKeyError,
+    MissingGroqApiKeyError,
     generate_explanation,
 )
 
@@ -19,7 +19,7 @@ def explain_analysis(request: ExplanationRequest) -> ExplanationResponse:
 
     try:
         explanation = generate_explanation(request.model_dump(mode="json"))
-    except MissingGeminiApiKeyError as exc:
+    except MissingGroqApiKeyError as exc:
         raise HTTPException(
             status_code=503,
             detail="AI explanations are not configured on this server.",

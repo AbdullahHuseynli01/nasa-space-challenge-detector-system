@@ -17,9 +17,15 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
-# Edit .env and set GEMINI_API_KEY to your local secret.
+# Edit .env and set GROQ_API_KEY to your local secret.
 python -m uvicorn app.main:app --reload
 ```
+
+API requests are rate-limited per client IP to 3 requests per 5 minutes by
+default. Override this with `RATE_LIMIT_REQUESTS` and
+`RATE_LIMIT_WINDOW_SECONDS`. A limited request returns HTTP 429 with
+`code: "RATE_LIMIT_EXCEEDED"`, a user-facing `message`, and
+`retry_after_seconds` for the frontend.
 
 During development, CORS allows `http://localhost:3000` and
 `http://localhost:5173`. Override the comma-separated origins with the
@@ -29,8 +35,8 @@ deployment; production startup requires explicit `CORS_ORIGINS` values.
 ## AI explanations
 
 `POST /api/explain` accepts a Python-calculated `region`, `variable`, `period`,
-and `trend` result. The backend sends it to Google's Gemini API with
-`gemini-2.5-flash` to write a concise explanation. The API key
+and `trend` result. The backend sends it to Groq's
+`openai/gpt-oss-120b` model to write a concise explanation. The API key
 is loaded only by the backend and is never part of the frontend request or
 response. The AI layer does not calculate or modify statistical results.
 
@@ -52,7 +58,7 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/explain `
 ```
 
 The response has the form `{ "explanation": "..." }`. The server sends the
-validated JSON to Gemini as text through the official `google-genai` SDK; it
+validated JSON to Groq as text through the official `groq` SDK; it
 does not send or process an image for this endpoint.
 
 ## Tests

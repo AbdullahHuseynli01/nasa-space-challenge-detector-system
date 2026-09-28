@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import load_local_environment
+from app.middleware import RateLimitMiddleware, get_rate_limit_settings
 
 load_local_environment()
 
@@ -53,6 +54,13 @@ app = FastAPI(
     title="NASA Sea-Ice Trend API",
     description="Backend API for NASA sea-ice time-series data.",
     version="0.1.0",
+)
+
+rate_limit_requests, rate_limit_window = get_rate_limit_settings()
+app.add_middleware(
+    RateLimitMiddleware,
+    requests=rate_limit_requests,
+    window_seconds=rate_limit_window,
 )
 
 app.add_middleware(
