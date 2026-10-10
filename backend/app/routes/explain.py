@@ -1,5 +1,7 @@
 """AI explanation endpoint for calculated analysis results."""
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import ExplanationRequest, ExplanationResponse
@@ -11,6 +13,7 @@ from app.services.explanation import (
 
 
 router = APIRouter(prefix="/explain", tags=["explanation"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=ExplanationResponse)
@@ -25,6 +28,7 @@ def explain_analysis(request: ExplanationRequest) -> ExplanationResponse:
             detail="AI explanations are not configured on this server.",
         ) from exc
     except ExplanationGenerationError as exc:
+        logger.warning("Explanation rejected: %s", exc)
         raise HTTPException(
             status_code=502,
             detail="Unable to generate a safe scientific explanation.",

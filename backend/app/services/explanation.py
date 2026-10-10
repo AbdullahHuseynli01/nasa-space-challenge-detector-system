@@ -1,6 +1,6 @@
 """Groq-generated explanations for calculated scientific results."""
 from __future__ import annotations
-import json, logging, os, re
+import json, logging, math, os, re
 from typing import Any
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
@@ -24,15 +24,21 @@ def _build_client(api_key: str) -> Any:
     except ValueError: timeout = 120.0
     return Groq(api_key=api_key, timeout=timeout)
 
+def _supported(token: str, supplied: list[float]) -> bool:
+    """Whole numbers (years, counts) must match exactly; decimals may be rounded (5%)."""
+    value = float(token)
+    if not any(c in token for c in ".eE"): return value in supplied
+    return any(math.isclose(value, s, rel_tol=0.05, abs_tol=1e-6) for s in supplied)
+
 def _validate(text: str, result: dict[str, Any]) -> str:
     text = text.strip(); words = text.split()
     if len(words) < 5: raise IncompleteExplanationError("The AI provider returned an incomplete explanation.")
     if len(words) > 80: raise ExplanationGenerationError("The AI provider returned an overly long explanation.")
     trend = result.get("trend", {}); direction = trend.get("direction") if isinstance(trend, dict) else None
-    if isinstance(direction, str) and direction.lower() not in text.lower(): raise IncompleteExplanationError("The supplied trend direction is missing.")
+    if isinstance(direction, str) and not any(form in text.lower() for form in (direction.lower(), direction.replace("_", " ").lower())): raise IncompleteExplanationError("The supplied trend direction is missing.")
     if "significant" not in text.lower() or _BAD.search(text): raise ExplanationGenerationError("The AI provider returned unsafe scientific language.")
-    allowed = set(_NUMBER.findall(json.dumps(result, ensure_ascii=False)))
-    if any(n not in allowed for n in _NUMBER.findall(text)): raise ExplanationGenerationError("The AI provider introduced an unsupported number.")
+    supplied = [float(n) for n in _NUMBER.findall(json.dumps(result, ensure_ascii=False))] + [0.05]
+    if not all(_supported(n, supplied) for n in _NUMBER.findall(text.replace("\u2212", "-"))): raise ExplanationGenerationError("The AI provider introduced an unsupported number.")
     return text
 
 def _stream_text(completion: Any) -> str:
@@ -50,7 +56,7 @@ def generate_explanation(result: dict[str, Any]) -> str:
     client = None
     try:
         client = _build_client(key)
-        completion = client.chat.completions.create(model=GROQ_MODEL, messages=[{"role":"system","content":_SYSTEM_PROMPT},{"role":"user","content":"Explain this authoritative, already-calculated result:\n" + json.dumps(result, ensure_ascii=False, sort_keys=True)}], temperature=0.2, max_completion_tokens=256, top_p=1, reasoning_effort="medium", stream=True, stop=None)
+        completion = client.chat.completions.create(model=GROQ_MODEL, messages=[{"role":"system","content":_SYSTEM_PROMPT},{"role":"user","content":"Explain this authoritative, already-calculated result:\n" + json.dumps(result, ensure_ascii=False, sort_keys=True)}], temperature=0.2, max_completion_tokens=1024, top_p=1, reasoning_effort="low", stream=True, stop=None)
         return _validate(_stream_text(completion), result)
     except (MissingGroqApiKeyError, ExplanationGenerationError): raise
     except Exception as exc:
