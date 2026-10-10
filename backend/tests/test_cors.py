@@ -6,7 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.main import app, configure_middleware
+from app.main import DEFAULT_CORS_ORIGINS, app, configure_middleware, get_cors_origins
 
 FRONTEND = "https://environmental-analytics-dashboard.vercel.app"
 EXPOSED = ("retry-after", "x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset")
@@ -97,3 +97,12 @@ def test_unhandled_error_is_json_500_with_cors_headers() -> None:
     assert response.status_code == 500
     assert response.json() == {"detail": "Internal server error."}
     assert response.headers["access-control-allow-origin"] == FRONTEND
+
+
+def test_configured_origins_extend_the_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CORS_ORIGINS", "https://example.org/, https://example.org")
+
+    origins = get_cors_origins()
+
+    assert origins[: len(DEFAULT_CORS_ORIGINS)] == list(DEFAULT_CORS_ORIGINS)
+    assert origins.count("https://example.org") == 1

@@ -26,7 +26,7 @@ from app.routes.trends import router as trends_router
 from app.routes.variables import router as variables_router
 
 
-# Used when CORS_ORIGINS is not set (development only; production must set it).
+# The project's own frontends: always allowed, and added to any CORS_ORIGINS.
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -47,10 +47,10 @@ CORS_PREFLIGHT_MAX_AGE_SECONDS = 3600
 
 
 def get_cors_origins() -> list[str]:
-    """Return explicit CORS origins from the environment or local defaults.
+    """Return the default origins plus any extra ones from the environment.
 
     CORS_ORIGINS is a comma-separated list of exact origins (scheme + host, no
-    path), e.g. "https://environmental-analytics-dashboard.vercel.app,http://localhost:3000".
+    path) to allow in addition to DEFAULT_CORS_ORIGINS, e.g. a custom domain.
     """
 
     configured_origins = os.getenv("CORS_ORIGINS")
@@ -71,7 +71,7 @@ def get_cors_origins() -> list[str]:
     if "*" in origins:
         raise ValueError("CORS_ORIGINS must contain explicit origins, not '*'")
 
-    return origins
+    return list(dict.fromkeys([*DEFAULT_CORS_ORIGINS, *origins]))
 
 
 def configure_middleware(

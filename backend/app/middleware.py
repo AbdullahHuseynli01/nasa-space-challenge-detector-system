@@ -44,7 +44,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: Callable,
-        requests: int = 3,
+        requests: int = 10,
         window_seconds: int = 300,
         max_clients: int = DEFAULT_MAX_CLIENTS,
     ) -> None:
@@ -151,6 +151,6 @@ def get_rate_limit_settings() -> tuple[int, int]:
     """Read rate-limit settings from environment with safe defaults."""
 
     return (
-        int(os.getenv("RATE_LIMIT_REQUESTS", "3")),
+        int(os.getenv("RATE_LIMIT_REQUESTS", "10")),
         int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "300")),
     )
