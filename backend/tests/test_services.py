@@ -85,3 +85,29 @@ def test_constant_annual_series_is_not_significant() -> None:
         "p_value": 1.0,
         "significant": False,
     }
+
+
+def test_exactly_linear_series_does_not_crash() -> None:
+    years = np.arange(2000, 2020)
+    # Exact binary fractions make every detrended rank identical.
+    annual = pd.DataFrame({"year": years, "value": 0.25 + (years - 2000) / 1024})
+
+    result = calculate_annual_trend(annual)
+
+    assert result["direction"] == "increasing"
+    assert result["significant"] is True
+    assert result["sen_slope"] == pytest.approx(1 / 1024)
+
+
+@pytest.mark.parametrize(
+    ("region", "direction", "low", "high"),
+    [("arctic", "decreasing", 1e-11, 1e-9), ("antarctic", "increasing", 1e-6, 1e-4)],
+)
+def test_bundled_p_values_use_standard_autocorrelation(
+    region: str, direction: str, low: float, high: float
+) -> None:
+    # The overlapping-segment estimator used to report 3.6e-12 and exactly 0.
+    result = calculate_annual_trend(annualize_time_series(load_csv(region)))
+
+    assert result["direction"] == direction
+    assert low < result["p_value"] < high

@@ -113,13 +113,6 @@ def annualize_time_series(data: pd.DataFrame) -> pd.DataFrame:
         ["year", "value"],
     ]
 
-    if len(annual) < MIN_ANNUAL_OBSERVATIONS:
-        raise InsufficientObservationsError(
-            "Trend analysis requires at least "
-            f"{MIN_ANNUAL_OBSERVATIONS} complete annual observations; "
-            f"found {len(annual)}."
-        )
-
     return annual.reset_index(drop=True)
 
 
@@ -153,6 +146,18 @@ def _mann_kendall_score(values: np.ndarray) -> tuple[float, float]:
     return score, float(variance)
 
 
+def _rank_autocorrelation(ranks: np.ndarray, lag: int) -> float:
+    """Standard sample autocorrelation of the ranks at ``lag``.
+
+    Hamed and Rao use the usual estimator, normalised by the variance of the
+    whole series. Correlating only the overlapping segments (np.corrcoef) lets
+    long lags built from a handful of pairs reach values near +/-1.
+    """
+
+    centred = ranks - ranks.mean()
+    return float(np.sum(centred[:-lag] * centred[lag:]) / np.sum(centred * centred))
+
+
 def _modified_mann_kendall_p_value(
     years: np.ndarray,
     values: np.ndarray,
@@ -174,18 +179,16 @@ def _modified_mann_kendall_p_value(
     detrended = values - sen_slope * years
     ranks = rankdata(detrended, method="average")
     autocorrelation_sum = 0.0
+    denominator = n * (n - 1) * (n - 2)
 
     if np.ptp(ranks) > 0:
         autocorrelation_threshold = norm.ppf(
             1 - AUTOCORRELATION_ALPHA / 2
         ) / np.sqrt(n)
-        denominator = n * (n - 1) * (n - 2)
 
         for lag in range(1, n - 2):
             weight = (n - lag) * (n - lag - 1) * (n - lag - 2)
-            lag_correlation = np.corrcoef(
-                ranks[:-lag], ranks[lag:]
-            )[0, 1]
+            lag_correlation = _rank_autocorrelation(ranks, lag)
             if (
                 np.isfinite(lag_correlation)
                 and abs(lag_correlation) > autocorrelation_threshold
@@ -196,9 +199,11 @@ def _modified_mann_kendall_p_value(
     # correlation reduces the effective variance; taking abs() here would
     # change the statistical test and can produce incorrect p-values.
     correction = 1 + 2 * autocorrelation_sum / denominator
-    # Guard against a numerically negative factor from noisy high-lag
-    # estimates. The correction must remain strictly positive for sqrt().
-    correction = max(correction, np.finfo(float).eps)
+    # A non-positive factor means the autocorrelation estimate is unusable:
+    # fall back to the plain Mann-Kendall variance instead of shrinking it
+    # towards zero, which would report p = 0.
+    if correction <= 0:
+        correction = 1.0
     corrected_variance = independent_variance * correction
     if score > 0:
         z_score = (score - 1) / np.sqrt(corrected_variance)
