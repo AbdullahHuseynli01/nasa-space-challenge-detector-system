@@ -213,8 +213,9 @@ def test_explain_uses_groq_without_recalculating(
         )
     }
     assert calls["model"] == "openai/gpt-oss-120b"
-    assert "-0.0018" in calls["contents"]
-    assert "0.002" in calls["contents"]
+    contents = " ".join(message["content"] for message in calls["messages"])
+    assert "-0.0018" in contents
+    assert "0.002" in contents
     assert "test-key" not in response.text
 
 
@@ -270,6 +271,52 @@ def test_explain_rejects_new_numeric_values(
     response = client.post("/api/explain", json=_explanation_request())
 
     assert response.status_code == 502
+
+
+def _use_fake_groq_reply(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> list[SimpleNamespace]:
+            return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])]
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()), close=lambda: None)
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setattr(explanation_service, "_build_client", lambda api_key: fake_client)
+
+
+def test_explain_accepts_rounded_numbers(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _use_fake_groq_reply(
+        monkeypatch,
+        "The arctic sea-ice fraction shows a decreasing trend of about \u22120.00179 per year "
+        "that is statistically significant.",
+    )
+
+    response = client.post("/api/explain", json=_explanation_request())
+
+    assert response.status_code == 200
+
+
+def test_explain_accepts_direction_written_as_words(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _explanation_request()
+    payload["trend"] = {
+        "direction": "no_significant_trend",
+        "sen_slope": 0.0003,
+        "p_value": 0.4,
+        "significant": False,
+    }
+    _use_fake_groq_reply(
+        monkeypatch,
+        "The arctic sea-ice fraction shows no significant trend over the supplied period.",
+    )
+
+    response = client.post("/api/explain", json=payload)
+
+    assert response.status_code == 200
 
 
 def test_explain_requires_groq_api_key(
