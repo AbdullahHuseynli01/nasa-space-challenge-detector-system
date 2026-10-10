@@ -20,3 +20,20 @@ backend/.coverage
 backend/htmlcov/
 backend/.mypy_cache/
 backend/.ruff_cache/
+
+# Frontend dependencies and build output (frontend/.gitignore has the full list)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# Local AI-assistant tooling
+.claude/
