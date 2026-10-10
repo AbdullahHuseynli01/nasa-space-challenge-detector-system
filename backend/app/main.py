@@ -2,7 +2,9 @@
 
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import load_local_environment
@@ -55,6 +57,19 @@ app = FastAPI(
     description="Backend API for NASA sea-ice time-series data.",
     version="0.1.0",
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_without_input(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Return 422 details without echoing submitted values (e.g. a stray API key)."""
+
+    errors = [
+        {key: value for key, value in error.items() if key not in {"input", "ctx"}}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": errors})
+
 
 rate_limit_requests, rate_limit_window = get_rate_limit_settings()
 app.add_middleware(
