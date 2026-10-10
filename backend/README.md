@@ -21,19 +21,18 @@ Copy-Item .env.example .env
 python -m uvicorn app.main:app --reload
 ```
 
-API requests are rate-limited per client IP to 3 requests per 5 minutes by
+API requests are rate-limited per client IP to 10 requests per 5 minutes by
 default. Override this with `RATE_LIMIT_REQUESTS` and
 `RATE_LIMIT_WINDOW_SECONDS`. A limited request returns HTTP 429 with
 `code: "RATE_LIMIT_EXCEEDED"`, a user-facing `message`, and
 `retry_after_seconds` for the frontend.
 
-During development, CORS allows `http://localhost:3000`,
+CORS always allows the project's own frontends: `http://localhost:3000`,
 `http://127.0.0.1:3000`, `http://localhost:5173` and the deployed dashboard
-`https://environmental-analytics-dashboard.vercel.app`. Override the
-comma-separated origins with the `CORS_ORIGINS` environment variable (exact
-origins, no trailing slash, no `*`). Set `APP_ENV=production` in deployment;
-production startup requires explicit `CORS_ORIGINS` values, for example
-`CORS_ORIGINS=https://environmental-analytics-dashboard.vercel.app,http://localhost:3000`.
+`https://environmental-analytics-dashboard.vercel.app`. Add more exact origins
+(comma-separated, no trailing slash, no `*`), such as a custom domain, with the
+`CORS_ORIGINS` environment variable. Set `APP_ENV=production` in deployment;
+production startup requires `CORS_ORIGINS` to be set.
 Responses expose `Retry-After` and the `X-RateLimit-*` headers to the browser,
 and CORS preflight requests never count against the rate limit.
 

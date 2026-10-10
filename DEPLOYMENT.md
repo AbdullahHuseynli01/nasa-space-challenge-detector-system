@@ -24,9 +24,9 @@ Environment variables:
 | Variable | Value | Notes |
 | --- | --- | --- |
 | `APP_ENV` | `production` | With this set, the app refuses to start unless `CORS_ORIGINS` is set. |
-| `CORS_ORIGINS` | `https://your-project.vercel.app` | Exact origin(s), comma-separated. No `*` (rejected), no path. Add custom domains too. |
+| `CORS_ORIGINS` | `https://your-project.vercel.app` | Extra exact origin(s), comma-separated, added to the built-in list (localhost and the deployed dashboard). No `*` (rejected), no path. |
 | `GROQ_API_KEY` | your key | Without it, AI explanations return "not configured". |
-| `RATE_LIMIT_REQUESTS` | `5` (or more) | Requests per window per client. Default 3. |
+| `RATE_LIMIT_REQUESTS` | `10` | Requests per window per client. Default 10. |
 | `RATE_LIMIT_WINDOW_SECONDS` | `300` | Default 300. |
 | `TRUST_PROXY_HEADERS` | `true` | Behind Render's proxy, limits each visitor by `X-Forwarded-For` instead of one shared bucket. |
 
