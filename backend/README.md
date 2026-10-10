@@ -27,10 +27,20 @@ default. Override this with `RATE_LIMIT_REQUESTS` and
 `code: "RATE_LIMIT_EXCEEDED"`, a user-facing `message`, and
 `retry_after_seconds` for the frontend.
 
-During development, CORS allows `http://localhost:3000` and
-`http://localhost:5173`. Override the comma-separated origins with the
-`CORS_ORIGINS` environment variable when needed. Set `APP_ENV=production` in
-deployment; production startup requires explicit `CORS_ORIGINS` values.
+During development, CORS allows `http://localhost:3000`,
+`http://127.0.0.1:3000`, `http://localhost:5173` and the deployed dashboard
+`https://environmental-analytics-dashboard.vercel.app`. Override the
+comma-separated origins with the `CORS_ORIGINS` environment variable (exact
+origins, no trailing slash, no `*`). Set `APP_ENV=production` in deployment;
+production startup requires explicit `CORS_ORIGINS` values, for example
+`CORS_ORIGINS=https://environmental-analytics-dashboard.vercel.app,http://localhost:3000`.
+Responses expose `Retry-After` and the `X-RateLimit-*` headers to the browser,
+and CORS preflight requests never count against the rate limit.
+
+Behind a proxy such as Render's, set `TRUST_PROXY_HEADERS=true` so each visitor
+is limited by their own address (the first `X-Forwarded-For` entry) instead of
+sharing one budget. The limiter forgets inactive clients and tracks at most
+10,000 at a time.
 
 ## AI explanations
 
