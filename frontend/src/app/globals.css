@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Clay design tokens. Components only use the semantic utilities below
+ * (bg-surface, text-ink, shadow-clay, …); light/dark values live in :root and
+ * [data-theme="dark"], so no component needs dark: variants.
+ */
+@theme inline {
+  --font-sans: var(--font-jakarta);
+  --font-mono: var(--font-jetbrains);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-well: var(--well);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-series: var(--series);
+  --color-rise: var(--rise);
+  --color-rise-soft: var(--rise-soft);
+  --color-fall: var(--fall);
+  --color-fall-soft: var(--fall-soft);
+  --color-caution: var(--caution);
+  --color-caution-soft: var(--caution-soft);
+
+  /* Raised clay: soft drop shadow + inner top highlight + inner bottom shade */
+  --shadow-clay: var(--clay);
+  --shadow-clay-sm: var(--clay-sm);
+  --shadow-clay-lift: var(--clay-lift);
+  /* Sunken well (inputs, segmented tracks, content trays) */
+  --shadow-well: var(--clay-well);
+  /* Accent-coloured clay (primary buttons) */
+  --shadow-clay-accent: var(--clay-accent);
+
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+:root {
+  color-scheme: light;
+
+  --canvas: #eceff6;
+  --surface: #f6f8fc;
+  --well: #e5e9f1;
+  --ink: #1d2433;
+  --ink-muted: #586378;
+  --ink-faint: #8a94a8;
+  --accent: #4f6bed;
+  --accent-soft: #e2e7fd;
+  /* Validated: OKLCH L in band and ≥ 3:1 against --surface */
+  --series: #4f6bed;
+  --rise: #1a8f61;
+  --rise-soft: #daf2e6;
+  --fall: #cf3f58;
+  --fall-soft: #fbe1e5;
+  --caution: #a8701a;
+  --caution-soft: #fbeed3;
+
+  --clay:
+    0 22px 44px -20px rgb(70 86 124 / 0.32),
+    0 6px 14px -6px rgb(70 86 124 / 0.14),
+    inset 0 2px 1px rgb(255 255 255 / 0.95),
+    inset 0 -8px 18px rgb(140 155 190 / 0.16);
+  --clay-sm:
+    0 10px 20px -10px rgb(70 86 124 / 0.38),
+    inset 0 1.5px 1px rgb(255 255 255 / 0.95),
+    inset 0 -4px 9px rgb(140 155 190 / 0.2);
+  --clay-lift:
+    0 30px 54px -22px rgb(70 86 124 / 0.4),
+    0 8px 18px -8px rgb(70 86 124 / 0.16),
+    inset 0 2px 1px rgb(255 255 255 / 0.95),
+    inset 0 -8px 18px rgb(140 155 190 / 0.16);
+  --clay-well:
+    inset 0 3px 8px rgb(100 116 155 / 0.16),
+    inset 0 -1px 1px rgb(255 255 255 / 0.85);
+  --clay-accent:
+    0 12px 24px -10px rgb(79 107 237 / 0.6),
+    inset 0 2px 2px rgb(255 255 255 / 0.4),
+    inset 0 -5px 12px rgb(28 46 150 / 0.35);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --canvas: #13161f;
+  --surface: #1c2130;
+  --well: #151925;
+  --ink: #e9edf5;
+  --ink-muted: #a3acbf;
+  --ink-faint: #6f798d;
+  --accent: #6c86f5;
+  --accent-soft: #262e4f;
+  /* Validated against the dark --surface */
+  --series: #6c86f5;
+  --rise: #4cc995;
+  --rise-soft: #173629;
+  --fall: #f0788c;
+  --fall-soft: #3d1e26;
+  --caution: #e8b04b;
+  --caution-soft: #392d16;
+
+  --clay:
+    0 24px 44px -20px rgb(0 0 0 / 0.65),
+    0 6px 14px -6px rgb(0 0 0 / 0.4),
+    inset 0 1.5px 1px rgb(255 255 255 / 0.08),
+    inset 0 -8px 18px rgb(0 0 0 / 0.28);
+  --clay-sm:
+    0 10px 20px -10px rgb(0 0 0 / 0.7),
+    inset 0 1px 1px rgb(255 255 255 / 0.09),
+    inset 0 -4px 9px rgb(0 0 0 / 0.3);
+  --clay-lift:
+    0 32px 54px -22px rgb(0 0 0 / 0.75),
+    0 8px 18px -8px rgb(0 0 0 / 0.45),
+    inset 0 1.5px 1px rgb(255 255 255 / 0.09),
+    inset 0 -8px 18px rgb(0 0 0 / 0.28);
+  --clay-well:
+    inset 0 3px 8px rgb(0 0 0 / 0.45),
+    inset 0 -1px 1px rgb(255 255 255 / 0.05);
+  --clay-accent:
+    0 12px 24px -10px rgb(108 134 245 / 0.55),
+    inset 0 2px 2px rgb(255 255 255 / 0.25),
+    inset 0 -5px 12px rgb(20 30 110 / 0.45);
+}
+
+body {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(900px 520px at 0% 0%, color-mix(in oklab, var(--accent-soft) 70%, transparent), transparent 70%),
+    radial-gradient(700px 480px at 100% 100%, color-mix(in oklab, var(--accent-soft) 45%, transparent), transparent 70%);
+  background-attachment: fixed;
+  color: var(--ink);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
