@@ -319,6 +319,30 @@ def test_explain_accepts_direction_written_as_words(
     assert response.status_code == 200
 
 
+def test_explain_reuses_a_validated_explanation(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[object] = []
+    text = "The arctic sea-ice fraction shows a decreasing trend that is statistically significant."
+
+    class FakeCompletions:
+        def create(self, **kwargs: object) -> list[SimpleNamespace]:
+            calls.append(kwargs)
+            return [SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content=text))])]
+
+    fake_client = SimpleNamespace(chat=SimpleNamespace(completions=FakeCompletions()), close=lambda: None)
+    monkeypatch.setenv("GROQ_API_KEY", "test-key")
+    monkeypatch.setattr(explanation_service, "_build_client", lambda api_key: fake_client)
+
+    first = client.post("/api/explain", json=_explanation_request())
+    second = client.post("/api/explain", json=_explanation_request())
+
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json() == {"explanation": text}
+    assert len(calls) == 1
+
+
 def test_explain_requires_groq_api_key(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
