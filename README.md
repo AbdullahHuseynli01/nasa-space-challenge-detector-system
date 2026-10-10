@@ -12,7 +12,7 @@ Built for the NASA International Space Apps Challenge.
 
 | | |
 | --- | --- |
-| **Live dashboard** | xxxxxx |
+| **Live dashboard** | https://environmental-analytics-dashboard.vercel.app |
 | **Live API (interactive docs)** | https://nasa-challenge-backend-nil7.onrender.com/docs |
 
 > The API runs on Render's free tier, which sleeps when idle. The first request after a
