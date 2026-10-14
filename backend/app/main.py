@@ -7,7 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import load_local_environment
+from app.config import configure_logging, load_local_environment
 from app.middleware import (
     RateLimitMiddleware,
     UnhandledErrorMiddleware,
@@ -15,6 +15,7 @@ from app.middleware import (
 )
 
 load_local_environment()
+configure_logging()
 
 from app.models.schemas import HealthResponse
 from app.routes.analysis import router as analysis_router

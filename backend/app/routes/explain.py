@@ -1,37 +1,36 @@
 """AI explanation endpoint for calculated analysis results."""
 
-import logging
-
 from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import ExplanationRequest, ExplanationResponse
-from app.services.explanation import (
-    ExplanationGenerationError,
-    MissingGroqApiKeyError,
-    generate_explanation,
-)
+from app.services.explanation import ExplanationError, generate_explanation
 
 
 router = APIRouter(prefix="/explain", tags=["explanation"])
-logger = logging.getLogger(__name__)
 
 
-@router.post("", response_model=ExplanationResponse)
+@router.post(
+    "",
+    response_model=ExplanationResponse,
+    responses={
+        429: {"description": "Groq is rate-limiting the server. Retry after the Retry-After header."},
+        502: {"description": "No reply passed validation, or Groq could not be reached."},
+        503: {"description": "AI explanations are not configured on this server."},
+        504: {"description": "Groq did not answer in time."},
+    },
+)
 def explain_analysis(request: ExplanationRequest) -> ExplanationResponse:
     """Explain a result that has already been calculated by Python."""
 
     try:
         explanation = generate_explanation(request.model_dump(mode="json"))
-    except MissingGroqApiKeyError as exc:
+    except ExplanationError as exc:
+        # The service has already logged the details.
+        headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
         raise HTTPException(
-            status_code=503,
-            detail="AI explanations are not configured on this server.",
-        ) from exc
-    except ExplanationGenerationError as exc:
-        logger.warning("Explanation rejected: %s", exc)
-        raise HTTPException(
-            status_code=502,
-            detail="Unable to generate a safe scientific explanation.",
+            status_code=exc.status_code,
+            detail=exc.public_message,
+            headers=headers,
         ) from exc
 
     return ExplanationResponse(explanation=explanation)
