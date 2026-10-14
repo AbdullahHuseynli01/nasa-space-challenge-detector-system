@@ -97,13 +97,13 @@ class RejectedReply(Exception):
         self.hint = hint
 
 
-_SYSTEM_PROMPT = """You describe a trend result that Python has already calculated, in plain English for a dashboard.
+_SYSTEM_PROMPT = """You write a data insight for a NASA open-data dashboard, using only facts that Python has already calculated.
 Rules:
-- Treat every value in the result as correct and final. Do not calculate, convert or re-derive anything.
-- Do not write any numbers except the start and end years. The dashboard already shows the exact values.
-- Use the wording you are given for the direction and the statistical significance.
-- Describe only what the result says. Do not mention causes, climate change, predictions, comparisons or anything else that is not in the result.
-- Write one or two sentences, at most 60 words, as plain text: no heading, label, list, quotes or markdown."""
+- Mention the region, the variable, the start and end years, the trend direction, the Sen's slope with its unit, and the Mann-Kendall p-value with whether the trend is statistically significant.
+- Copy every number exactly as it is written in the facts. Do not round, convert or recalculate anything, and add no other numbers: no durations, percentages or rates per decade.
+- Use the exact wording given for the direction and the significance.
+- Do not explain causes or mention climate change, predictions, comparisons or anything else that is not in the facts.
+- Write one or two sentences, 30 to 45 words, as plain text: no heading, label, list, quotes or markdown."""
 
 _CACHE_SIZE = 64
 # Validated explanations keyed by the exact result: the data is static, so a
@@ -111,14 +111,21 @@ _CACHE_SIZE = 64
 _cache: OrderedDict[str, str] = OrderedDict()
 _cache_lock = threading.Lock()
 
-# Models write minus signs and ranges with several dash characters.
-_DASHES = str.maketrans(dict.fromkeys("‐‑‒–—−﹣－", "-"))
+# Models write minus signs and ranges with several dash characters (hyphen,
+# non-breaking hyphen, figure dash, en and em dash, minus sign, small and
+# full-width hyphen-minus).
+_DASHES = str.maketrans(dict.fromkeys([0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2212, 0xFE63, 0xFF0D], "-"))
+# The dashboard highlights "sea-ice fraction" and "-0.000995" only with a
+# plain hyphen, so replies get one instead of gpt-oss's (non-breaking) hyphens.
+_HYPHENS = str.maketrans(dict.fromkeys([0x2010, 0x2011], "-"))
 _SUPERSCRIPTS = str.maketrans("⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺", "0123456789-+")
 # "1.5 × 10⁻¹⁰", "1.5 x 10^-10" and "10^(-6)", rewritten as "1.5e-10" and "1e-6".
 _POWER_OF_TEN = re.compile(
     r"(?<![\w.])(?:(?P<mantissa>\d+(?:\.\d+)?)\s*[×x*·⋅]\s*)?10\s*"
     r"(?:\^\s*\(?\s*(?P<caret>[-+]?\d+)\s*\)?|(?P<superscript>[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))"
 )
+# "yr-1", "year^-1" and "yr^{-1}" are units, not the number -1.
+_PER_YEAR_UNIT = re.compile(r"\b(?:yr|year)s?\s*\^?\s*\{?\s*-\s*1\s*\}?(?!\d)", re.I)
 _NUMBER = re.compile(
     r"(?<![\w.])(?P<number>-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?)(?P<percent>\s*(?:%|per\s?cent))?",
     re.I,
@@ -177,7 +184,7 @@ def generate_explanation(result: dict[str, Any]) -> str:
     label = f"{result.get('region')}/{result.get('variable')}"
     messages = [
         {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": _user_message(result, result_json)},
+        {"role": "user", "content": _user_message(result)},
     ]
     started = time.monotonic()
     deadline = started + TIME_BUDGET_SECONDS
@@ -273,19 +280,54 @@ def generate_explanation(result: dict[str, Any]) -> str:
     raise failure
 
 
-def _user_message(result: dict[str, Any], result_json: str) -> str:
+def _user_message(result: dict[str, Any]) -> str:
+    """The result as ready-to-quote facts: every number is in a form the validator accepts."""
+
     trend = result.get("trend") or {}
     period = result.get("period") or {}
-    subject = f"{str(result.get('region', '')).capitalize()} {str(result.get('variable', '')).replace('_', ' ')}"
-    if trend.get("significant"):
-        wording = f'say the trend is "{trend.get("direction")}" and "statistically significant"'
+    significant = bool(trend.get("significant"))
+    if significant:
+        direction = str(trend.get("direction"))
+        trend_text = f"statistically significant {direction} trend"
+        wording = f'"{direction}" and "statistically significant"'
     else:
-        wording = 'say there is "no statistically significant trend"'
-    return (
-        f"Result:\n{result_json}\n\n"
-        f"Describe the {subject.strip()} from {period.get('start')} to {period.get('end')}. "
-        f"Required wording: {wording}."
+        trend_text = "no statistically significant trend"
+        wording = f'"{trend_text}"'
+    return "\n".join(
+        [
+            "Facts:",
+            f"- Region: {str(result.get('region', '')).capitalize()}",
+            f"- Variable: {str(result.get('variable', '')).replace('_', ' ')}",
+            f"- Period: {period.get('start')} to {period.get('end')}",
+            f"- Trend: {trend_text}",
+            f"- Sen's slope: {_plain_decimal(float(trend.get('sen_slope', 0.0)))} per year",
+            f"- Mann-Kendall p-value: {_p_value_text(float(trend.get('p_value', 1.0)), significant)}",
+            "",
+            f"Required wording: {wording}.",
+        ]
     )
+
+
+def _plain_decimal(value: float, digits: int = 3) -> str:
+    """``value`` to ``digits`` significant digits with no exponent: -0.00099496 → "-0.000995"."""
+
+    if value == 0:
+        return "0"
+    decimals = max(0, digits - 1 - math.floor(math.log10(abs(value))))
+    text = f"{value:.{decimals}f}"
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+def _p_value_text(p_value: float, significant: bool) -> str:
+    """A p-value as usually reported: below 0.001 as "p < 0.001", otherwise 3 significant digits."""
+
+    if p_value < 0.001:
+        return "p < 0.001"
+    text = f"{p_value:.3g}"
+    if significant and float(text) >= 0.05:
+        # Rounding must not turn a significant p-value (below 0.05) into 0.05.
+        return "p < 0.05"
+    return f"p = {text}"
 
 
 def _build_client(api_key: str) -> Any:
@@ -383,9 +425,9 @@ def _validate(text: str, result: dict[str, Any]) -> str:
     if words < MIN_WORDS:
         raise RejectedReply(f"it is incomplete ({words} words)", "Write one or two complete sentences.")
     if words > MAX_WORDS or len(cleaned) > MAX_CHARACTERS:
-        raise RejectedReply(f"it is too long ({words} words)", "Write at most 60 words.")
+        raise RejectedReply(f"it is too long ({words} words)", "Write 30 to 45 words.")
 
-    normalized = _expand_powers_of_ten(cleaned.translate(_DASHES))
+    normalized = _expand_powers_of_ten(_PER_YEAR_UNIT.sub("per year", cleaned.translate(_DASHES)))
     trend = result.get("trend")
     trend = trend if isinstance(trend, dict) else {}
     _check_direction_and_significance(normalized, trend)
@@ -395,9 +437,9 @@ def _validate(text: str, result: dict[str, Any]) -> str:
 
 
 def _clean(text: str) -> str:
-    """Collapse whitespace and drop markdown emphasis, a leading label and wrapping quotes."""
+    """Collapse whitespace, use plain hyphens, drop markdown emphasis, a leading label and wrapping quotes."""
 
-    cleaned = _LABEL.sub("", " ".join(text.replace("**", "").replace("__", "").split()))
+    cleaned = _LABEL.sub("", " ".join(text.translate(_HYPHENS).replace("**", "").replace("__", "").split()))
     if len(cleaned) > 1 and cleaned[0] in "\"“" and cleaned[-1] in "\"”":
         cleaned = cleaned[1:-1].strip()
     return cleaned
@@ -455,7 +497,7 @@ def _check_numbers(text: str, result: dict[str, Any], trend: dict[str, Any]) -> 
         if not _number_is_supported(token, bool(match["percent"]), values, levels):
             raise RejectedReply(
                 f"it contains the number {token}{'%' if match['percent'] else ''}, which is not in the result",
-                "Do not write any numbers except the start and end years.",
+                "Use only the numbers in the facts, copied exactly as written.",
             )
 
 

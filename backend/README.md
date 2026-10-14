@@ -70,6 +70,11 @@ The response has the form `{ "explanation": "..." }`. The server sends the
 validated JSON to Groq as text through the official `groq` SDK; it
 does not send or process an image for this endpoint.
 
+The model receives the result as ready-to-quote facts: region, variable,
+period, direction, Sen's slope (3 significant digits, per year) and the
+Mann-Kendall p-value (`p < 0.001` below 0.001, otherwise 3 significant
+digits). It is asked for a 30–45-word insight that quotes them exactly.
+
 Every reply is checked before it is returned. It must state the supplied
 direction and significance and must not claim causes such as climate change.
 It may quote only numbers from the result, rounded or written in another
