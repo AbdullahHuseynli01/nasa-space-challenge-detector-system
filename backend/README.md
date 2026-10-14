@@ -70,6 +70,27 @@ The response has the form `{ "explanation": "..." }`. The server sends the
 validated JSON to Groq as text through the official `groq` SDK; it
 does not send or process an image for this endpoint.
 
+Every reply is checked before it is returned. It must state the supplied
+direction and significance and must not claim causes such as climate change.
+It may quote only numbers from the result, rounded or written in another
+common notation (`1.5 × 10⁻¹⁰`, a dropped minus sign), plus conventional
+significance levels that the p-value supports (`p < 0.001`, `95%`). A rejected
+reply is retried with the reason, up to 3 Groq calls within 45 seconds.
+Temporary Groq failures are retried with exponential backoff and jitter,
+following Groq's `Retry-After`. `GROQ_TIMEOUT_SECONDS` (default 20) limits each
+call.
+
+| Status | Meaning |
+|---|---|
+| 429 | Groq is rate-limiting the server. `Retry-After` says when to retry (at most 60 seconds). |
+| 502 | No reply passed the checks, or Groq returned an error or could not be reached. |
+| 503 | `GROQ_API_KEY` is missing, or Groq rejected the key, model or request parameters. |
+| 504 | Groq did not answer in time. |
+
+Each problem is logged to stdout with the reason: `Explanation rejected:` with
+the model's reply, `Explanation upstream error:` with Groq's own error
+message, and `Explanation failed:` with the status returned.
+
 ## Tests
 
 Install the development dependencies and run the integration tests from this
