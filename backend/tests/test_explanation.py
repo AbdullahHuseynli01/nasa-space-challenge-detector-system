@@ -57,20 +57,51 @@ VALID_ARCTIC_REPLY = (
         # The sign is carried by "decreasing".
         (ARCTIC, "The Arctic sea ice fraction is decreasing by about 0.000995 per year, a statistically significant trend."),
         # gpt-oss often writes U+2011 (non-breaking hyphen) for minus signs and hyphens.
-        (ARCTIC, "The Arctic sea‑ice fraction shows a decreasing trend of ‑0.000995 per year that is statistically significant."),
+        (ARCTIC, "The Arctic sea\u2011ice fraction shows a decreasing trend of \u20110.000995 per year that is statistically significant."),
         (ARCTIC, "The calculated trend shows the Arctic sea ice fraction decreasing, and it is statistically significant."),
         (ARCTIC, "The Arctic sea ice fraction shows a decreasing trend that is statistically significant (p < 0.001)."),
         (ARCTIC, "The decreasing trend in Arctic sea ice fraction is statistically significant, with a p-value below the 0.05 threshold."),
         (ARCTIC, "The Arctic sea ice fraction shows a decreasing trend that is statistically significant at the 95% confidence level."),
         (ARCTIC, "The decreasing trend in Arctic sea ice fraction is statistically significant, so it is unlikely to be due to chance."),
         (ARCTIC, "**Explanation:** The Arctic sea ice fraction shows a decreasing trend that is statistically significant (p = 0.0)."),
-        (ARCTIC_UNROUNDED, "The Arctic sea ice fraction shows a decreasing trend that is statistically significant (p ≈ 1.5 × 10⁻¹⁰)."),
+        (ARCTIC_UNROUNDED, "The Arctic sea ice fraction shows a decreasing trend that is statistically significant (p \u2248 1.5 \u00d7 10\u207b\u00b9\u2070)."),
         (ARCTIC_UNROUNDED, "The Arctic sea ice fraction shows a decreasing trend of about 0.001 per year that is statistically significant (p = 1.55e-10)."),
-        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p = 9e‑06)."),
-        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p ≈ 9 × 10^-6)."),
+        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p = 9e\u201106)."),
+        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p \u2248 9 \u00d7 10^-6)."),
         (ANTARCTIC, "Between 1980 and 2025 the Antarctic sea ice fraction rose by 0.00049 per year, a statistically significant increase."),
         (NO_TREND, "The Arctic sea ice fraction shows no statistically significant trend between 1980 and 2025."),
         (NO_TREND, "The change in Arctic sea ice fraction from 1980 to 2025 is not statistically significant (p = 0.4)."),
+        # Insights in the style the prompt asks for, with typical model typography.
+        (
+            ARCTIC,
+            "From 1980 to 2025, Arctic sea ice fraction showed a statistically significant decreasing trend, "
+            "with a Sen's slope of \u22120.000995 per year and a Mann\u2013Kendall p-value below 0.001.",
+        ),
+        (
+            ARCTIC,
+            "Between 1980 and 2025, the Arctic sea\u2011ice fraction declined at a Sen's slope of \u20110.000995 "
+            "yr\u207b\u00b9; this decreasing trend is statistically significant (Mann-Kendall p < .001).",
+        ),
+        (
+            ANTARCTIC,
+            "From 1980 to 2025, Antarctic sea ice fraction rose at a Sen's slope of 0.00049 yr^-1, "
+            "a statistically significant increasing trend (Mann-Kendall p < 0.001).",
+        ),
+        (
+            ANTARCTIC,
+            "Antarctic sea ice fraction increased from 1980 to 2025 (Sen's slope 0.00049 yr^{-1}), "
+            "a statistically significant increasing trend with Mann-Kendall p < 0.001.",
+        ),
+        (
+            P_OF_0_002,
+            "From 1980 to 2025, Arctic sea ice fraction showed a statistically significant decreasing trend "
+            "(Sen's slope -0.0018 per year, Mann-Kendall p = 0.002).",
+        ),
+        (
+            NO_TREND,
+            "From 1980 to 2025, Arctic sea ice fraction shows no statistically significant trend: "
+            "the Sen's slope is 0.0003 per year and the Mann-Kendall p-value is 0.4.",
+        ),
     ],
 )
 def test_sound_replies_are_accepted(result: dict[str, Any], reply: str) -> None:
@@ -83,9 +114,12 @@ def test_sound_replies_are_accepted(result: dict[str, Any], reply: str) -> None:
         # A calculated duration is a new number.
         (ARCTIC, "The Arctic sea ice fraction shows a decreasing trend over 46 years that is statistically significant.", "number 46"),
         (ARCTIC, "The Arctic sea ice fraction is decreasing by 0.1 per year, which is statistically significant.", "number 0.1"),
+        # Rates per decade and durations are calculations the prompt forbids.
+        (ARCTIC, "Arctic sea ice fraction shows a statistically significant decreasing trend of -0.00995 per decade.", "number -0.00995"),
+        (ARCTIC, "Over the 45-year record, Arctic sea ice fraction shows a statistically significant decreasing trend.", "number 45"),
         # A bound is allowed only when it is true.
         (P_OF_0_002, "The Arctic sea ice fraction shows a statistically significant decreasing trend (p < 0.001).", "number 0.001"),
-        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p ≈ 9.9 × 10⁻⁶).", "number 9.9e-6"),
+        (ANTARCTIC, "The Antarctic sea ice fraction shows an increasing trend that is statistically significant (p \u2248 9.9 \u00d7 10\u207b\u2076).", "number 9.9e-6"),
         (ARCTIC, "The Arctic sea ice fraction shows a decreasing trend that is not statistically significant.", "not statistically significant"),
         (NO_TREND, "The Arctic sea ice fraction shows a statistically significant decreasing trend.", "not statistically significant"),
         (ARCTIC, "The Arctic sea ice fraction changed between 1980 and 2025, and the change is statistically significant.", "is decreasing"),
@@ -101,6 +135,57 @@ def test_sound_replies_are_accepted(result: dict[str, Any], reply: str) -> None:
 def test_unsound_replies_are_rejected(result: dict[str, Any], reply: str, reason: str) -> None:
     with pytest.raises(explanation_service.RejectedReply, match=re.escape(reason)):
         explanation_service._validate(reply, result)
+
+
+@pytest.mark.parametrize(
+    ("result", "slope", "p_value"),
+    [
+        (ARCTIC, "-0.000995", "p < 0.001"),
+        (ARCTIC_UNROUNDED, "-0.000995", "p < 0.001"),
+        (ANTARCTIC, "0.00049", "p < 0.001"),
+        (P_OF_0_002, "-0.0018", "p = 0.002"),
+        (NO_TREND, "0.0003", "p = 0.4"),
+        # Rounding must not make a significant p-value look like 0.05.
+        (_result("arctic", "decreasing", -0.0012, 0.04996), "-0.0012", "p < 0.05"),
+    ],
+)
+def test_the_model_gets_ready_to_quote_facts(result: dict[str, Any], slope: str, p_value: str) -> None:
+    message = explanation_service._user_message(result)
+
+    assert f"- Sen's slope: {slope} per year" in message
+    assert f"- Mann-Kendall p-value: {p_value}" in message
+    # No exponent notation (like Python's 9e-06) for the model to copy.
+    assert not re.search(r"\d[eE][-+]?\d", message)
+
+
+@pytest.mark.parametrize("result", [ARCTIC, ARCTIC_UNROUNDED, ANTARCTIC, P_OF_0_002, NO_TREND])
+def test_an_insight_quoting_the_facts_passes_first_time(result: dict[str, Any]) -> None:
+    facts = dict(
+        line[2:].split(": ", 1)
+        for line in explanation_service._user_message(result).splitlines()
+        if line.startswith("- ")
+    )
+    trend = facts["Trend"]
+    slope = facts["Sen's slope"]
+    p_value = facts["Mann-Kendall p-value"]
+    reply = (
+        f"From {facts['Period']}, {facts['Region']} {facts['Variable']} shows "
+        f"{trend if trend.startswith('no ') else 'a ' + trend}, with a Sen's slope of {slope} "
+        f"and a Mann-Kendall {p_value}."
+    )
+
+    assert explanation_service._validate(reply, result) == reply
+
+
+def test_cleaned_reply_uses_plain_hyphens() -> None:
+    reply = (
+        "Arctic sea\u2011ice fraction shows a statistically significant decreasing trend "
+        "of \u20110.000995 per year."
+    )
+
+    assert explanation_service._validate(reply, ARCTIC) == (
+        "Arctic sea-ice fraction shows a statistically significant decreasing trend of -0.000995 per year."
+    )
 
 
 def test_cleaned_reply_has_no_markdown_or_label() -> None:
