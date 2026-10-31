@@ -110,9 +110,6 @@ in `data/`; the backend reads identical copies in `backend/app/data/`.
 > Analyses and visualizations used in this project were produced with the Giovanni online
 > data system, developed and maintained by the NASA GES DISC.
 
-**Roadmap datasets** (shown as "soon" in the dashboard, not yet integrated): NASA GISS
-surface temperature analysis, NASA OCO-2 carbon dioxide, NASA MODIS vegetation index.
-
 **Methods.**
 Sen, P. K. (1968). Estimates of the regression coefficient based on Kendall's tau.
 *Journal of the American Statistical Association*, 63(324), 1379–1389.

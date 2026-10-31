@@ -1,5 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-
 import type { RegionDefinition } from "@/core/regions/define";
 import type { TrendDirection } from "@/types/api";
 
@@ -56,9 +54,6 @@ export interface DatasetDefinition<
   readonly id: TId;
   readonly label: string;
   readonly description: string;
-  readonly icon: LucideIcon;
-  /** "planned" datasets appear in the selector but cannot be selected. */
-  readonly status: "available" | "planned";
   /** Data provenance shown in the UI. */
   readonly source: string;
   readonly regions: TRegions;

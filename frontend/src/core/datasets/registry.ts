@@ -1,6 +1,5 @@
 import type { RegionDefinition } from "@/core/regions/define";
 
-import { co2Dataset, globalTemperatureDataset, vegetationDataset } from "./planned";
 import { seaIceDataset } from "./sea-ice";
 import type { DatasetDefinition, VariableStrategy } from "./types";
 
@@ -9,11 +8,11 @@ import type { DatasetDefinition, VariableStrategy } from "./types";
  * (dataset, variable, unit, region) and every lookup below derives from it, so
  * adding a dataset means defining it with `defineDataset(...)` and listing it here.
  */
-export const DATASET_REGISTRY = [seaIceDataset, globalTemperatureDataset, co2Dataset, vegetationDataset] as const;
+const DATASET_REGISTRY = [seaIceDataset] as const;
 
 type RegistryEntry = (typeof DATASET_REGISTRY)[number];
 
-export type DatasetId = RegistryEntry["id"];
+type DatasetId = RegistryEntry["id"];
 export type VariableId = RegistryEntry["variables"][number]["id"];
 export type UnitId = RegistryEntry["variables"][number]["unit"];
 export type RegionId = RegistryEntry["regions"][number]["id"];
@@ -83,10 +82,8 @@ export interface RawSelection {
  * back field by field to the first supported option.
  */
 export function resolveSelection(raw: RawSelection): DatasetSelection {
-  const requested = raw.dataset ? datasetsById.get(raw.dataset) : undefined;
-  const dataset =
-    requested?.status === "available" ? requested : datasets.find((entry) => entry.status === "available");
-  if (!dataset) throw new Error("The dataset registry has no available datasets.");
+  const dataset = (raw.dataset ? datasetsById.get(raw.dataset) : undefined) ?? datasets[0];
+  if (!dataset) throw new Error("The dataset registry is empty.");
 
   const variable = dataset.variables.find((entry) => entry.id === raw.variable) ?? dataset.variables[0];
   const region = dataset.regions.find((entry) => entry.id === raw.region) ?? dataset.regions[0];

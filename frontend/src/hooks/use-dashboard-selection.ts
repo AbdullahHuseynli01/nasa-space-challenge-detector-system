@@ -5,14 +5,12 @@ import { useCallback, useMemo } from "react";
 
 import {
   resolveSelection,
-  type DatasetId,
   type DatasetSelection,
   type RegionId,
   type VariableId,
 } from "@/core/datasets/registry";
 
 export interface SelectionPatch {
-  readonly dataset?: DatasetId;
   readonly variable?: VariableId;
   readonly region?: RegionId;
 }
@@ -41,9 +39,8 @@ export function useDashboardSelection(): readonly [
   const select = useCallback(
     (patch: SelectionPatch) => {
       const next = resolveSelection({
-        dataset: patch.dataset ?? selection.dataset.id,
-        // Switching dataset resets the variable to that dataset's default.
-        variable: patch.variable ?? (patch.dataset ? undefined : selection.variable.id),
+        dataset: selection.dataset.id,
+        variable: patch.variable ?? selection.variable.id,
         region: patch.region ?? selection.region.id,
       });
       const search = new URLSearchParams({
