@@ -51,7 +51,6 @@ src/
 │   │   ├── types.ts              VariableStrategy, DatasetDefinition, TrendMethodology
 │   │   ├── define.ts             defineDataset / defineVariable (+ API and methodology defaults)
 │   │   ├── sea-ice.ts            The sea-ice dataset
-│   │   ├── planned.ts            Roadmap datasets, shown as disabled "soon" tabs
 │   │   └── registry.ts           DATASET_REGISTRY → every id union, lookup and selection
 │   ├── regions/
 │   │   ├── define.ts             RegionDefinition, defineRegion, formatBounds
@@ -74,7 +73,7 @@ src/
 
 ## Adding a dataset
 
-Two steps, with no changes anywhere else. Charts, cards, selectors, zod validation,
+Two steps. Charts, cards, region and variable selectors, zod validation,
 query keys and every id type are derived from the registry.
 
 1. Define it, e.g. `src/core/datasets/co2.ts`. A new region can be declared right here:
@@ -90,8 +89,6 @@ query keys and every id type are derived from the registry.
      id: "co2",
      label: "CO₂",
      description: "Atmospheric CO₂ trend analysis.",
-     icon: Wind,
-     status: "available",
      source: "NASA OCO-2",
      regions: [globe],
      variables: [
@@ -106,6 +103,9 @@ query keys and every id type are derived from the registry.
    ```
 
 2. Add it to `DATASET_REGISTRY` in `src/core/datasets/registry.ts`.
+
+Sea ice is the only dataset, so the dashboard has no dataset menu. A second dataset
+also needs a menu that lets people choose it.
 
 Optional per-dataset overrides: `api` (endpoint paths) and `methodology` (statistic
 labels). The registry rejects two different objects with the same id, so shared

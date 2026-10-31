@@ -14,7 +14,7 @@ import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useHydrated } from "@/hooks/use-hydrated";
 
 import { RequestBudget } from "./request-budget";
-import { DatasetSelector, RegionSwitcher, VariableSelector } from "./selectors";
+import { RegionSwitcher, VariableSelector } from "./selectors";
 import { SeriesCard, SeriesCardSkeleton } from "./series-card";
 import { TrendCard, TrendCardSkeleton } from "./trend-card";
 
@@ -69,10 +69,7 @@ export function Dashboard() {
 
       {/* Controls: stack on mobile, one row from `sm` */}
       <motion.div variants={rise} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center">
-          <DatasetSelector selection={selection} onSelect={select} />
-          {selection.dataset.variables.length > 1 && <VariableSelector selection={selection} onSelect={select} />}
-        </div>
+        {selection.dataset.variables.length > 1 && <VariableSelector selection={selection} onSelect={select} />}
         <RegionSwitcher selection={selection} onSelect={select} />
       </motion.div>
 

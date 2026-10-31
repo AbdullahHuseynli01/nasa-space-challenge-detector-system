@@ -1,5 +1,3 @@
-import { Snowflake } from "lucide-react";
-
 import { antarctic, arctic } from "@/core/regions/catalog";
 import { formatPercent, formatSigned } from "@/lib/format";
 
@@ -29,8 +27,6 @@ export const seaIceDataset = defineDataset({
   id: "sea-ice",
   label: "Sea Ice",
   description: "Time-series observations and deterministic trend analysis of polar sea-ice fraction.",
-  icon: Snowflake,
-  status: "available",
   source: "NASA GES DISC · MERRA-2 FRSEAICE (M2TMNXFLX)",
   regions: [arctic, antarctic],
   variables: [seaIceFraction],

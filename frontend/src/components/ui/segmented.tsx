@@ -11,8 +11,6 @@ export interface SegmentOption<T extends string> {
   readonly value: T;
   readonly label: ReactNode;
   readonly icon?: ReactNode;
-  readonly disabled?: boolean;
-  readonly hint?: ReactNode;
   readonly title?: string;
 }
 
@@ -40,14 +38,13 @@ export function Segmented<T extends string>({
   className,
 }: SegmentedProps<T>) {
   const knobId = useId();
-  const enabled = options.filter((option) => !option.disabled);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-    if (!step || enabled.length === 0) return;
+    if (!step || options.length === 0) return;
     event.preventDefault();
-    const index = enabled.findIndex((option) => option.value === value);
-    const next = enabled[(index + step + enabled.length) % enabled.length];
+    const index = options.findIndex((option) => option.value === value);
+    const next = options[(index + step + options.length) % options.length];
     if (next) onChange(next.value);
   };
 
@@ -72,10 +69,9 @@ export function Segmented<T extends string>({
             aria-checked={selected}
             aria-label={iconOnly && typeof option.label === "string" ? option.label : undefined}
             tabIndex={selected ? 0 : -1}
-            disabled={option.disabled}
             title={option.title ?? (iconOnly && typeof option.label === "string" ? option.label : undefined)}
             onClick={() => onChange(option.value)}
-            whileTap={option.disabled ? undefined : { scale: 0.95 }}
+            whileTap={{ scale: 0.95 }}
             className={cn(
               "relative inline-flex items-center justify-center gap-2 rounded-[13px] font-semibold whitespace-nowrap outline-none",
               "transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent/50",
@@ -83,8 +79,7 @@ export function Segmented<T extends string>({
               iconOnly && (size === "sm" ? "px-2" : "px-2.5"),
               fullWidth && "flex-1",
               selected ? "text-ink" : "text-ink-muted",
-              !selected && !option.disabled && "hover:text-ink",
-              option.disabled && "cursor-not-allowed opacity-50",
+              !selected && "hover:text-ink",
             )}
           >
             {selected && (
@@ -98,7 +93,6 @@ export function Segmented<T extends string>({
             <span className="relative z-10 inline-flex items-center gap-2">
               {option.icon}
               {!iconOnly && option.label}
-              {option.hint}
             </span>
           </motion.button>
         );

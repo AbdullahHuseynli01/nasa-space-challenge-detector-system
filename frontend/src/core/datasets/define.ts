@@ -43,8 +43,8 @@ export function defineDataset<
   const TVariables extends readonly VariableStrategy[],
   const TRegions extends readonly RegionDefinition[],
 >(dataset: DatasetInput<TId, TVariables, TRegions>): DatasetDefinition<TId, TVariables, TRegions> {
-  if (dataset.status === "available" && (dataset.variables.length === 0 || dataset.regions.length === 0)) {
-    throw new Error(`Dataset "${dataset.id}" is available but has no variables or regions.`);
+  if (dataset.variables.length === 0 || dataset.regions.length === 0) {
+    throw new Error(`Dataset "${dataset.id}" has no variables or regions.`);
   }
   return {
     ...dataset,
