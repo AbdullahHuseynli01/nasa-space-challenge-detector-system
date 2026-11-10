@@ -17,6 +17,18 @@ Built for the NASA International Space Apps Challenge.
 ![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688)
 ![NASA MERRA-2](https://img.shields.io/badge/Data-NASA%20MERRA--2-0b3d91)
 
+## 🎥 Demo video
+
+Scan the QR code or use the link below to watch the project demo.
+
+<p align="center">
+  <a href="https://www.image2url.com/r2/default/videos/1794346763897-efaa2efa-9103-46f1-8997-d7f2f338cb09.mp4">
+    <img src="demo-video-qr.png" alt="QR code linking to the TerraVision AI demo video" width="240" />
+  </a>
+  <br />
+  <a href="https://www.image2url.com/r2/default/videos/1794346763897-efaa2efa-9103-46f1-8997-d7f2f338cb09.mp4">Watch the demo video</a>
+</p>
+
 ## Overview
 
 TerraVision AI makes Earth observation data easier to explore and understand. This dashboard focuses on long-term sea-ice trends in the Arctic and Antarctic, using NASA MERRA-2 data and statistical methods to present the results clearly.
