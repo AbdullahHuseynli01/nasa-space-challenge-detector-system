@@ -169,9 +169,9 @@ Built by a team of developers and analysts participating in the NASA Space Apps 
 | Team Member | Role |
 | --- | --- |
 | Abdullah Huseynli | Full-Stack Developer |
-| Mehemmed Xelilli | Data Analyst |
+| Muhammad Khalilli | Data Analyst |
 | Mehemmed Hasan | Frontend & Backend Developer |
-| Murad Khalil | Presentation & Demo Lead |
+| Murad Khalilli | Presentation & Demo Lead |
 
 ## Testing
 
